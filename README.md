@@ -37,6 +37,7 @@ Access GitLab at: `https://gitlab.local:8443`
 | `GITLAB_HTTPS_PORT` | HTTPS port mapping |
 | `GITLAB_SSH_PORT` | SSH port for git operations |
 | `TZ` | Timezone |
+| `GITLAB_RUNNER_TOKEN` | Shared runner registration token |
 
 ### GitLab Configuration (config/gitlab.rb)
 
@@ -116,4 +117,57 @@ podman exec -it gitlab gitlab-ctl tail
 
 ```bash
 git clone ssh://git@gitlab.local:2222/username/repo.git
+```
+
+## GitLab Runner
+
+A GitLab Runner container is included for CI/CD pipelines.
+
+### Auto-Registration
+
+The runner automatically registers with GitLab on startup using the `GITLAB_RUNNER_TOKEN` from `.env`. It will:
+
+1. Wait for GitLab to be available
+2. Register itself as a shared runner
+3. Start processing jobs
+
+View registration progress:
+
+```bash
+podman logs -f gitlab-runner
+```
+
+### Manual Registration (Optional)
+
+If you need to register manually or add additional runners:
+
+```bash
+podman exec -it gitlab-runner gitlab-runner register \
+  --url "https://gitlab.local:8443" \
+  --registration-token "YOUR_TOKEN" \
+  --executor "docker" \
+  --docker-image "alpine:latest" \
+  --tls-verify=false
+```
+
+### Runner Commands
+
+```bash
+# Check runner status
+podman exec -it gitlab-runner gitlab-runner status
+
+# List registered runners
+podman exec -it gitlab-runner gitlab-runner list
+
+# Verify runner connection
+podman exec -it gitlab-runner gitlab-runner verify
+
+# View runner logs
+podman logs -f gitlab-runner
+```
+
+### Unregister Runner
+
+```bash
+podman exec -it gitlab-runner gitlab-runner unregister --all-runners
 ```

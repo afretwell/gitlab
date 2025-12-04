@@ -4,12 +4,17 @@ services:
         container_name: gitlab
         restart: always
         hostname: '${GITLAB_HOSTNAME}'
+        networks:
+            default:
+                aliases:
+                - gitlab.local
         environment:
             GITLAB_OMNIBUS_CONFIG: |
                 external_url 'https://${GITLAB_HOSTNAME}'
                 gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
                 gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT}
                 gitlab_rails['time_zone'] = '${TZ}'
+                gitlab_rails['initial_shared_runners_registration_token'] = '${GITLAB_RUNNER_TOKEN}'
         ports:
         - '${GITLAB_HTTP_PORT}:80'
         - '${GITLAB_HTTPS_PORT}:443'
@@ -20,6 +25,27 @@ services:
         - gitlab_data:/var/opt/gitlab
         shm_size: '256m'
 
+    gitlab-runner:
+        image: gitlab/gitlab-runner:alpine3.21-bleeding
+        container_name: gitlab-runner
+        restart: always
+        depends_on:
+        - gitlab
+        environment:
+            CI_SERVER_URL: 'https://gitlab.local'
+            REGISTRATION_TOKEN: '${GITLAB_RUNNER_TOKEN}'
+            RUNNER_NAME: 'docker-runner'
+            RUNNER_EXECUTOR: 'docker'
+            RUNNER_DOCKER_IMAGE: 'alpine:latest'
+            RUNNER_TAGS: 'docker,local'
+        volumes:
+        - gitlab_runner:/etc/gitlab-runner
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./scripts/runner-entrypoint.sh:/entrypoint.sh:ro
+        - ./config/ssl/gitlab.local.crt:/etc/gitlab-runner/certs/gitlab.local.crt:ro
+        entrypoint: ["/bin/sh", "/entrypoint.sh"]
+
 volumes:
     gitlab_logs:
     gitlab_data:
+    gitlab_runner:
