@@ -1,0 +1,8 @@
+config/*
+data/*
+logs/*
+
+!config/.gitkeep
+!config/gitlab.rb
+!data/.gitkeep
+!logs/.gitkeep
